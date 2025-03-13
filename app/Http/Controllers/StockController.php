@@ -15,6 +15,8 @@ class StockController extends Controller
 
     /**
      * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Resources\Json\JsonResource|\Illuminate\Http\JsonResponse
      */
     public function index()
     {
@@ -25,11 +27,13 @@ class StockController extends Controller
 
     /**
      * Display the specified resource.
+     *
+     * @return \Illuminate\Http\Resources\Json\JsonResource|\Illuminate\Http\JsonResponse
      */
     public function show(Stock $stock)
     {
-        $cacheKey = 'stocks.' . $stock->id;
-        
+        $cacheKey = 'stocks.'.$stock->id;
+
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($stock) {
             return new StockResource($stock);
         });

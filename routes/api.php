@@ -16,7 +16,7 @@ Route::prefix('/stocks')->group(function () {
 
 Route::prefix('/prices')->group(function () {
     Route::get('/', [StockPriceController::class, 'getAllLatest']);
+    Route::get('/batch', [StockPriceController::class, 'getMultipleLatest']);
+    // Route::get('/price-change', [StockPriceController::class, 'calculatePriceChange']);
     Route::get('/{stock}', [StockPriceController::class, 'getSingleLatest']);
-    Route::post('/multiple', [StockController::class, 'getMultipleLatest']);
-    Route::post('/price-change', [StockController::class, 'calculatePriceChange']);
 });

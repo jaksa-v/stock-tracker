@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\StockPriceController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -8,5 +9,14 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // })->middleware('auth:sanctum');
 
-Route::get('/stocks', [StockController::class, 'index']);
-Route::get('/stocks/{stock}', [StockController::class, 'show']);
+Route::prefix('/stocks')->group(function () {
+    Route::get('/', [StockController::class, 'index']);
+    Route::get('/{stock}', [StockController::class, 'show']);
+});
+
+Route::prefix('/prices')->group(function () {
+    Route::get('/', [StockPriceController::class, 'getAllLatest']);
+    Route::get('/{stock}', [StockPriceController::class, 'getSingleLatest']);
+    Route::post('/multiple', [StockController::class, 'getMultipleLatest']);
+    Route::post('/price-change', [StockController::class, 'calculatePriceChange']);
+});

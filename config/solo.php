@@ -57,6 +57,7 @@ return [
         'Reverb' => Command::from('php artisan reverb:start --debug')->lazy(),
         'Pint' => Command::from('./vendor/bin/pint --ansi')->lazy(),
         'Queue' => Command::from('php artisan queue:work')->lazy(),
+        'Schedule' => Command::from('php artisan schedule:work')->lazy(),
         'Tests' => Command::from('php artisan test --colors=always')->withEnv(['APP_ENV' => 'testing'])->lazy(),
     ],
 

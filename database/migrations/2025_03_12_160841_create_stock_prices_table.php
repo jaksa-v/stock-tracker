@@ -19,12 +19,15 @@ return new class extends Migration
             $table->decimal('low', 10, 4);
             $table->decimal('close', 10, 4);
             $table->bigInteger('volume');
+            $table->date('price_date');
             $table->timestamp('price_timestamp')->useCurrent();
             $table->timestamps();
 
             // Add indexes for performance
             $table->index('price_timestamp');
+            $table->index('price_date');
             $table->index(['stock_id', 'price_timestamp']);
+            $table->index(['stock_id', 'price_date']);
         });
     }
 

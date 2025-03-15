@@ -62,31 +62,16 @@ class StockPriceController extends Controller
     public function getMultipleLatest(Request $request)
     {
         $stocksString = $request->input('stocks');
+        $validationResult = $this->validateStockSymbols($stocksString);
 
-        if (empty($stocksString) || ! is_string($stocksString)) {
-            return response()->json([
-                'error' => 'Please provide valid stock symbols',
-                'message' => 'Use a comma-separated list (stocks=AAPL,MSFT,GOOG)',
-            ], 400);
+        if (! is_array($validationResult)) {
+            return $validationResult; // Return error response
         }
 
-        $symbols = explode(',', $stocksString);
-        $symbols = collect($symbols)
-            ->map(fn ($symbol) => trim(strtoupper($symbol)))
-            ->filter(fn ($symbol) => ! empty($symbol))
-            ->unique()
-            ->values()
-            ->toArray();
-
-        if (empty($symbols)) {
-            return response()->json([
-                'error' => 'No valid stock symbols provided',
-                'message' => 'Please provide at least one valid stock symbol',
-            ], 400);
-        }
+        $symbols = $validationResult;
 
         // Sort the symbols for cache key (for potential reusability)
-        $sortedSymbols = collect($symbols)->sort()->implode('.');
+        $sortedSymbols = collect($validationResult)->sort()->implode('.');
         $cacheKey = "stocks.multiple.{$sortedSymbols}.latest";
 
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($symbols) {
@@ -132,20 +117,13 @@ class StockPriceController extends Controller
         $endDate = $request->input('end_date');
         $stocksString = $request->input('stocks');
 
-        $symbols = explode(',', $stocksString);
-        $symbols = collect($symbols)
-            ->map(fn ($symbol) => trim(strtoupper($symbol)))
-            ->filter(fn ($symbol) => ! empty($symbol))
-            ->unique()
-            ->values()
-            ->toArray();
+        $validationResult = $this->validateStockSymbols($stocksString);
 
-        if (empty($symbols)) {
-            return response()->json([
-                'error' => 'No valid stock symbols provided',
-                'message' => 'Please provide at least one valid stock symbol',
-            ], 400);
+        if (! is_array($validationResult)) {
+            return $validationResult; // Return error response
         }
+
+        $symbols = $validationResult;
 
         // Sort the symbols for cache key (for potential reusability)
         $sortedSymbols = collect($symbols)->sort()->implode('.');
@@ -225,5 +203,38 @@ class StockPriceController extends Controller
                 ],
             ]);
         });
+    }
+
+    /**
+     * Validate stock symbols from a string input
+     *
+     * @param  string  $stocksString
+     * @return array|\Illuminate\Http\JsonResponse Array of valid symbols or error response
+     */
+    private function validateStockSymbols($stocksString)
+    {
+        if (empty($stocksString) || ! is_string($stocksString)) {
+            return response()->json([
+                'error' => 'Please provide valid stock symbols',
+                'message' => 'Use a comma-separated list (stocks=AAPL,MSFT,GOOG)',
+            ], 400);
+        }
+
+        $symbols = explode(',', $stocksString);
+        $symbols = collect($symbols)
+            ->map(fn ($symbol) => trim(strtoupper($symbol)))
+            ->filter(fn ($symbol) => ! empty($symbol))
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($symbols)) {
+            return response()->json([
+                'error' => 'No valid stock symbols provided',
+                'message' => 'Please provide at least one valid stock symbol',
+            ], 400);
+        }
+
+        return $symbols;
     }
 }

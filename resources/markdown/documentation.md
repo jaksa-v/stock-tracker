@@ -1,3 +1,5 @@
+# Stock Tracker Documentation
+
 ## Uvod
 
 U ovom dokumentu ću proći kroz sve komponente mog rješenja za zadatak koji sam dobio u sklopu invtervjua.
@@ -27,8 +29,6 @@ Schema::create('stocks', function (Blueprint $table) {
 	$table->string('name');
 	$table->text('description')->nullable();
 	$table->timestamps();
-
-	$table->index('symbol');
 });
 ```
 
@@ -61,7 +61,7 @@ Funkcionalnost integracije sa Alpha Vantage API-jem sam implementirao kao odvoje
 
 ### getStockPrice()
 
-Primijetio sam da AlphaVantage zna vratiti response sa statusom 200 i pored toga što je došlo do greške, ili makar nismo dobili podatke, pa odatle malo opširniji kod za handlovanje grešaka. Osim toga, upotrijebio sam RateLimiter imajući u uvid ograničenje free tiera na 25 poziva dnevno.
+Primijetio sam da AlphaVantage zna vratiti response sa statusom 200 i pored toga što je došlo do greške, ili makar nismo dobili podatke, pa odatle malo opširniji kod za handlovanje grešaka. Osim toga, upotrijebio sam _RateLimiter_ imajući u uvid ograničenje free tiera na 25 poziva dnevno.
 
 ```php
 
@@ -75,13 +75,15 @@ $response = Http::retry(2, 1000)->get($this->baseUrl, [
 ]);
 
 // oblik u kom vracamo podatke
-$response = Http::retry(2, 1000)->get($this->baseUrl, [
-	'function' => 'TIME_SERIES_INTRADAY',
-	'symbol' => $symbol,
-	'interval' => '1min',
-	'apikey' => $this->apiKey,
-	'outputsize' => 'compact',
-]);
+return [
+		'symbol' => $symbol,
+		'timestamp' => $latestTimestamp,
+		'open' => $latestData['1. open'],
+		'high' => $latestData['2. high'],
+		'low' => $latestData['3. low'],
+		'close' => $latestData['4. close'],
+		'volume' => $latestData['5. volume'],
+];
 ```
 
 ### sendErrorNotification()
@@ -92,13 +94,13 @@ Takođe, postoji funkcija koja ce poslati mejl svaki put kada dodje do greške p
 
 Za svrhe dobijanja podataka sa AlphaVantage-a napravio sam komandu **FetchStockPrices** i u **console.php** sam zakazao da se pokreće svakog minuta.
 
-S obzirom na rate limiting, rijetko sam palio Queue već sam komandu pokretao manuelno:
+S obzirom na rate limiting, rijetko sam palio _Queue_ već sam komandu pokretao manuelno:
 
 ```bash
 php artisan stocks:fetch
 ```
 
-U sklopu komande, osim sto čuvam nove cijene za konkretnu akciju u bazi, popunjavam Cache sa najaktuelnijom cijenom, kako za konkretnu akciju, tako i za listu svih akcija:
+U sklopu komande, osim sto čuvam nove cijene za konkretnu akciju u bazi, popunjavam _Cache_ sa najaktuelnijom cijenom, kako za konkretnu akciju, tako i za listu svih akcija:
 
 ```php
 $stockPrice = new StockPrice([
@@ -145,7 +147,7 @@ Route::prefix('/prices')->group(function () {
 -   **Get Batch Prices** - /prices/batch?stocks=AAPL,MSFT,AMZN
 -   **Get Price Change** - /prices/change?stocks=AAPL,MSFT&start_date=2025-03-14&end_date=2025-03-15
 
-Prefix /api se podrazumijeva na svakom endpointu, i simboli su case insensitive.
+Prefix **/api** se podrazumijeva na svakom endpointu, i simboli su case insensitive.
 
 ### Oblik podataka u Responsu
 
@@ -180,9 +182,16 @@ Dakle, vraćam samo najpotrebnije podatke, a za StockPrice vraćam samo najnovij
 
 ## Kontroleri
 
-## Testovi
+**StockController** je jednostavan i vraća podatke o akcijama ili konkretnoj akciji. Sve je cache-ovano na jedan dan jer se ovi podaci gotovo nikad ne mijenjaju.
 
-Sve do sad opisane funcionalnosti su pokrivene testovima. Koristio sam Pest.
+**StockPriceController** je kontroler koji vraća podatke o cijenama akcija. Sve je cache-ovano na jedan minut, osim endpointa za kalkulaciju promjene cijene koja je na jedan dan. Validaciju inputa sam odvojio u posebnu funkciju _validateStockSymbols_.
+
+## Napomene
+
+-   Projekat je deployovan na **Laravel Cloud**-u.
+-   Sve do sad opisane funcionalnosti su pokrivene testovima. Koristio sam **Pest**.
+-   Pri setup-u se seed-uju podaci u **stocks** tabeli za akcije koje sam izabrao
+-   u **StockPrice** modelu je implementirana funkcionalnost za automatsko popunjavanje **price_date**. To polje koristimo radi lakšeg prisupa kada nam trebaju raniji datumi, ne samo najnovije cijene
 
 ## Development
 
@@ -204,6 +213,4 @@ php artisan migrate --seed
 composer run dev
 ```
 
-## Deployment
-
-Projekat je deployovan na Laravel Cloud-u.
+U developmentu se koristi SQLite.

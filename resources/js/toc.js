@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!contentArea || !tocNav) return;
 
-    const headings = Array.from(contentArea.querySelectorAll("h1, h2, h3, h4"));
+    const headings = Array.from(contentArea.querySelectorAll("h1, h2"));
 
     if (headings.length === 0) return;
 

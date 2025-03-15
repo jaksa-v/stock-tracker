@@ -18,7 +18,7 @@ Vidio sam da vraća podatke u ovom obliku:
 }
 ```
 
-Bazu sam organizovao u dvije tabele, **stocks** i **stock_prices**, koje su definisane sljedecim migracijama:
+Bazu sam organizovao u dvije tabele, **stocks** i **stock_prices**, koje su definisane sljedećim migracijama:
 
 ```php
 Schema::create('stocks', function (Blueprint $table) {
@@ -53,15 +53,15 @@ Schema::create('stock_prices', function (Blueprint $table) {
 });
 ```
 
-Dodao sam odredjene indexe radi boljih performansi.
+Dodao sam određene indexe radi boljih performansi.
 
 ## Alpha Vantage API integracija
 
-Funkcionalnost integracije sa Alpha Vantage API-jem sam implementirao kao odvojenu klasu u _app/Services/AlphaVantageService.php_ radi bolje organizacije koda, razdvajanja funkcionalnosti i lakseg testiranja.
+Funkcionalnost integracije sa Alpha Vantage API-jem sam implementirao kao odvojenu klasu u _app/Services/AlphaVantageService.php_ radi bolje organizacije koda, razdvajanja funkcionalnosti i lakšeg testiranja.
 
 ### getStockPrice()
 
-Primijetio sam da AlphaVantage zna vratiti response sa statusom 200 i pored toga sto je doslo do greske, ili makar nismo dobili podatke, pa odatle malo opsirniji kod za handlovanje gresaka. Osim toga, upotrijebio sam RateLimiter imajuci u uvid ogranicenje free tiera na 25 poziva dnevno.
+Primijetio sam da AlphaVantage zna vratiti response sa statusom 200 i pored toga što je došlo do greške, ili makar nismo dobili podatke, pa odatle malo opširniji kod za handlovanje grešaka. Osim toga, upotrijebio sam RateLimiter imajući u uvid ograničenje free tiera na 25 poziva dnevno.
 
 ```php
 
@@ -86,19 +86,19 @@ $response = Http::retry(2, 1000)->get($this->baseUrl, [
 
 ### sendErrorNotification()
 
-Takodje, postoji funkcija koja ce poslati mejl svaki put kada dodje do greske pri povlacenju fajlova. Napravio sam potrebnu Mailable klasu i template i naznacio da se mail salje preko Queue-a.
+Takođe, postoji funkcija koja ce poslati mejl svaki put kada dodje do greške pri povlačenju podataka. Napravio sam potrebnu Mailable klasu i template i naznačio da se mail šalje preko Queue-a.
 
 ## Automatizacija
 
-Za svrhe dobijanja podataka sa AlphaVantage-a napravio sam komandu **FetchStockPrices** i u **console.php** sam zakazao da se pokrece svakog minuta.
+Za svrhe dobijanja podataka sa AlphaVantage-a napravio sam komandu **FetchStockPrices** i u **console.php** sam zakazao da se pokreće svakog minuta.
 
-S obzirom na rate limiting, rijetko sam palio Queue vec sam komandu pokretao manuelno:
+S obzirom na rate limiting, rijetko sam palio Queue već sam komandu pokretao manuelno:
 
 ```bash
 php artisan stocks:fetch
 ```
 
-U sklopu komande, osim sto cuvam nove cijene za konkretnu akciju u bazu, popunjavam Cache sa najaktuelnijom cijenom, kako za konkretnu akciju, tako i za listu svih akcija:
+U sklopu komande, osim sto čuvam nove cijene za konkretnu akciju u bazi, popunjavam Cache sa najaktuelnijom cijenom, kako za konkretnu akciju, tako i za listu svih akcija:
 
 ```php
 $stockPrice = new StockPrice([
@@ -120,7 +120,7 @@ Cache::put('stocks.all.latest', $latestPrices, now()->addMinutes(1));
 
 ## Postavka API endpoint-a
 
-API endpointe same aplikacije organizovao sam na sljedeci nacin:
+API endpointe same aplikacije organizovao sam na sljedeći način:
 
 ```php
 Route::prefix('/stocks')->group(function () {
@@ -176,7 +176,7 @@ public function toArray(Request $request): array
 }
 ```
 
-Dakle, vracam samo najpotrebnije podatke, a za StockPrice vracam samo najaktuelniju cijenu (_close_ vrijednost).
+Dakle, vraćam samo najpotrebnije podatke, a za StockPrice vraćam samo najnoviju cijenu (i samo _close_ vrijednost).
 
 ## Kontroleri
 
@@ -187,6 +187,22 @@ Sve do sad opisane funcionalnosti su pokrivene testovima. Koristio sam Pest.
 ## Development
 
 Koristio sam Laravel 12.
+
+Treba klonirati projekat, instalirati requiremente sa Composer-om i Node-om, uraditi migracije i seed-ovati bazu:
+
+```bash
+git clone git@github.com:jaksa-v/stock-tracker.git
+
+cd stock-tracker
+
+composer install
+
+npm install
+
+php artisan migrate --seed
+
+composer run dev
+```
 
 ## Deployment
 

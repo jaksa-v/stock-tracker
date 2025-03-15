@@ -113,4 +113,17 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Email Address for Error Notifications
+    |--------------------------------------------------------------------------
+    |
+    | This address will be used for sending error notifications from the
+    | application. If not set, the system will fall back to using the
+    | default FROM address above.
+    |
+    */
+
+    'admin_email' => env('MAIL_ADMIN_EMAIL', env('MAIL_FROM_ADDRESS', 'admin@example.com')),
+
 ];

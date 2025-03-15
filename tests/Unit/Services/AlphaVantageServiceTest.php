@@ -1,8 +1,10 @@
 <?php
 
+use App\Mail\ApiErrorNotification;
 use App\Services\AlphaVantageService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 
 beforeEach(function () {
     Config::set('services.alpha_vantage.key', 'fake-api-key');
@@ -52,7 +54,10 @@ it('gets stock price when API responds successfully', function () {
     });
 });
 
-it('returns null when API response has an error message', function () {
+it('returns null and sends error email when API response has an error message', function () {
+    // Fake mail to catch notifications
+    Mail::fake();
+    
     // Mock HTTP response with an error message
     Http::fake([
         'https://www.alphavantage.co/query*' => Http::response([
@@ -60,10 +65,21 @@ it('returns null when API response has an error message', function () {
         ], 200),
     ]);
 
+    // Configure admin email
+    Config::set('mail.admin_email', 'admin@example.com');
+
     $service = app(AlphaVantageService::class);
     $result = $service->getStockPrice('INVALID');
 
     expect($result)->toBeNull();
+    
+    // Assert that an email was sent
+    Mail::assertQueued(ApiErrorNotification::class, function ($mail) {
+        return $mail->source === 'AlphaVantage API: API Response Error' &&
+               $mail->errorMessage === 'Invalid API call. Please retry or visit the documentation.' &&
+               $mail->context['symbol'] === 'INVALID' &&
+               isset($mail->context['response']);
+    });
 });
 
 it('returns null when API response has no time series data', function () {
@@ -84,26 +100,117 @@ it('returns null when API response has no time series data', function () {
     expect($result)->toBeNull();
 });
 
-it('returns null when API request fails', function () {
-    // Mock HTTP response with a failure status
-    Http::fake([
-        'https://www.alphavantage.co/query*' => Http::response(null, 500),
-    ]);
+it('returns null and sends error email when API request fails', function () {
+    // Fake mail to catch notifications
+    Mail::fake();
+    
+    // Override the isSuccessful method to always return false
+    $mockResponse = new class {
+        public function json() { return []; }
+        public function successful() { return false; }
+        public function status() { return 500; }
+        public function body() { return '{"error":"Server error"}'; }
+    };
+    
+    Http::shouldReceive('retry')
+        ->once()
+        ->andReturnSelf();
+        
+    Http::shouldReceive('get')
+        ->once()
+        ->andReturn($mockResponse);
+
+    // Configure admin email
+    Config::set('mail.admin_email', 'admin@example.com');
 
     $service = app(AlphaVantageService::class);
     $result = $service->getStockPrice('AAPL');
 
     expect($result)->toBeNull();
+    
+    // Assert that an email was sent
+    Mail::assertQueued(ApiErrorNotification::class, function ($mail) {
+        return $mail->source === 'AlphaVantage API: HTTP Error' &&
+               str_contains($mail->errorMessage, 'Failed to fetch data from Alpha Vantage: 500') &&
+               $mail->context['symbol'] === 'AAPL' &&
+               $mail->context['status'] === 500;
+    });
 });
 
-it('returns null when an exception occurs during API request', function () {
+it('returns null and sends error email when an exception occurs during API request', function () {
+    // Fake mail to catch notifications
+    Mail::fake();
+    
     // Mock HTTP to throw an exception
     Http::fake(function () {
         throw new \Exception('Connection error');
     });
 
+    // Configure admin email
+    Config::set('mail.admin_email', 'admin@example.com');
+
     $service = app(AlphaVantageService::class);
     $result = $service->getStockPrice('AAPL');
 
     expect($result)->toBeNull();
+    
+    // Assert that an email was sent
+    Mail::assertQueued(ApiErrorNotification::class, function ($mail) {
+        return $mail->source === 'AlphaVantage API: Exception' &&
+               $mail->errorMessage === 'Connection error' &&
+               $mail->context['symbol'] === 'AAPL';
+    });
+});
+
+it('sends error email when rate limit is exceeded', function () {
+    // Fake mail to catch notifications
+    Mail::fake();
+    
+    // Configure admin email
+    Config::set('mail.admin_email', 'admin@example.com');
+    
+    // Make the rate limiter report too many attempts
+    Illuminate\Support\Facades\RateLimiter::shouldReceive('tooManyAttempts')
+        ->once()
+        ->andReturn(true);
+    
+    Illuminate\Support\Facades\RateLimiter::shouldReceive('availableIn')
+        ->once()
+        ->andReturn(3600); // 1 hour
+    
+    $service = app(AlphaVantageService::class);
+    $result = $service->getStockPrice('AAPL');
+
+    expect($result)->toBeNull();
+    
+    // Assert that an email was sent
+    Mail::assertQueued(ApiErrorNotification::class, function ($mail) {
+        return $mail->source === 'AlphaVantage API: Rate Limit' &&
+               str_contains($mail->errorMessage, 'Daily rate limit exceeded') &&
+               $mail->context['symbol'] === 'AAPL';
+    });
+});
+
+it('does not send email when admin email is not configured', function () {
+    // Fake mail to catch notifications
+    Mail::fake();
+    
+    // Set admin email to null
+    Config::set('mail.admin_email', null);
+    Config::set('mail.from.address', null);
+    
+    // Mock HTTP response with an error message
+    Http::fake([
+        'https://www.alphavantage.co/query*' => Http::response([
+            'Error Message' => 'Invalid API call.',
+        ], 200),
+    ]);
+
+    $service = app(AlphaVantageService::class);
+    $result = $service->getStockPrice('INVALID');
+
+    expect($result)->toBeNull();
+    
+    // Assert that no email was sent
+    Mail::assertNothingQueued();
 });

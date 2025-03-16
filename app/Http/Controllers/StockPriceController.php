@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\StockPrices\CalculatePriceChange;
-use App\Actions\StockPrices\GetMultipleLatestPrices;
 use App\Http\Requests\CalculatePriceChangeRequest;
 use App\Http\Requests\GetMultipleLatestStocksRequest;
 use App\Http\Resources\StockPriceResource;
@@ -63,7 +62,6 @@ class StockPriceController extends Controller
      */
     public function getMultipleLatest(
         GetMultipleLatestStocksRequest $request,
-        GetMultipleLatestPrices $getMultipleAction
     ) {
         $symbols = $request->getValidatedSymbols();
 
@@ -78,8 +76,21 @@ class StockPriceController extends Controller
         $sortedSymbols = collect($symbols)->sort()->implode('.');
         $cacheKey = "stocks.multiple.{$sortedSymbols}.latest";
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($getMultipleAction, $symbols) {
-            return $getMultipleAction->handle($symbols);
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($symbols) {
+            $stocks = Stock::whereIn('symbol', $symbols)
+                ->with(['prices' => function ($query) {
+                    $query->latest('price_timestamp')->limit(1);
+                }])
+                ->get();
+
+            if ($stocks->isEmpty()) {
+                return response()->json([
+                    'error' => 'No stocks found',
+                    'message' => 'None of the requested symbols could be found in our database',
+                ], 404);
+            }
+
+            return StockPriceResource::collection($stocks);
         });
     }
 

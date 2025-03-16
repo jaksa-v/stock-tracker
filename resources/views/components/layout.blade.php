@@ -22,7 +22,7 @@
         
         @stack('scripts')
         
-        <footer class="mt-36 py-4 border-gray-200">
+        <footer class="mt-28 py-4 border-gray-200">
             <div class="max-w-6xl mx-auto px-4 flex justify-start items-center gap-x-4 text-sm text-gray-500">
                 <div class="font-medium">{{ date('Y') }} Stock Tracker</div>
                 -

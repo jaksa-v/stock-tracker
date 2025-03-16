@@ -7,7 +7,7 @@ use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 Route::get('/', function () {
     // For dev
-    // Cache::forget('docs.homepage');
+    Cache::forget('docs.homepage');
 
     $html = Cache::remember('docs.homepage', 86400, function () {
         $markdownContent = File::get(resource_path('markdown/documentation.md'));

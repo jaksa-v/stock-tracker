@@ -184,7 +184,7 @@ Dakle, vraćam samo najpotrebnije podatke, a za StockPrice vraćam samo najnovij
 
 **StockController** je jednostavan i vraća podatke o akcijama ili konkretnoj akciji. Sve je cache-ovano na jedan dan jer se ovi podaci gotovo nikad ne mijenjaju.
 
-**StockPriceController** je kontroler koji vraća podatke o cijenama akcija. Sve je cache-ovano na jedan minut, osim endpointa za kalkulaciju promjene cijene koja je na jedan dan. Validaciju inputa sam odvojio u posebnu funkciju _validateStockSymbols_.
+**StockPriceController** je kontroler koji vraća podatke o cijenama akcija. Sve je cache-ovano na jedan minut, osim endpointa za kalkulaciju promjene cijene koja je na jedan dan. Validacija inputa (query parametara) se nalazi u Request-ovima gdje je to bilo potrebno, a komplikovaniju logiku sam izdvojio u app/Actions/StockPrices direktorijum.
 
 ## Napomene
 
@@ -212,5 +212,7 @@ php artisan migrate --seed
 
 composer run dev
 ```
+
+Obratiti pažnju na _.env.example_ fajl i dodati varijable koje nedostaju.
 
 U developmentu se koristi SQLite.

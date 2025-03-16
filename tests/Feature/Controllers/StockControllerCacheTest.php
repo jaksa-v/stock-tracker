@@ -59,7 +59,7 @@ it('caches individual stock responses', function () {
     $response1->assertStatus(200);
 
     // Verify that cache has been set with the correct key
-    $cacheKey = "stocks.{$stock->id}";
+    $cacheKey = "stocks.{$stock->symbol}";
     expect(Cache::has($cacheKey))->toBeTrue();
 
     // Modify the stock to confirm the next response comes from cache
@@ -91,7 +91,7 @@ it('updates cache for modified stock data', function () {
     $this->getJson('/api/stocks');
 
     // Verify cache exists
-    expect(Cache::has("stocks.{$stock->id}"))->toBeTrue();
+    expect(Cache::has("stocks.{$stock->symbol}"))->toBeTrue();
     expect(Cache::has('stocks.all'))->toBeTrue();
 
     // Update the stock directly in the database
@@ -101,11 +101,11 @@ it('updates cache for modified stock data', function () {
     ]);
 
     // Manually clear the cache as we would in a controller
-    Cache::forget("stocks.{$stock->id}");
+    Cache::forget("stocks.{$stock->symbol}");
     Cache::forget('stocks.all');
 
     // Verify cache is cleared
-    expect(Cache::has("stocks.{$stock->id}"))->toBeFalse();
+    expect(Cache::has("stocks.{$stock->symbol}"))->toBeFalse();
     expect(Cache::has('stocks.all'))->toBeFalse();
 
     // New request should return updated data and repopulate cache
@@ -114,5 +114,5 @@ it('updates cache for modified stock data', function () {
         ->assertJsonFragment(['name' => 'Updated Name']);
 
     // Verify cache has been repopulated
-    expect(Cache::has("stocks.{$stock->id}"))->toBeTrue();
+    expect(Cache::has("stocks.{$stock->symbol}"))->toBeTrue();
 });

@@ -30,11 +30,21 @@ class StockController extends Controller
      *
      * @return \Illuminate\Http\Resources\Json\JsonResource|\Illuminate\Http\JsonResponse
      */
-    public function show(Stock $stock)
+    public function show($stockSymbol)
     {
-        $cacheKey = 'stocks.'.$stock->id;
+        $symbol = strtoupper($stockSymbol);
+        $cacheKey = 'stocks.'.$symbol;
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($stock) {
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($symbol) {
+            $stock = Stock::where('symbol', $symbol)->first();
+
+            if (! $stock) {
+                return response()->json([
+                    'error' => 'Stock not found',
+                    'message' => "No stock found with symbol '{$symbol}'",
+                ], 404);
+            }
+
             return new StockResource($stock);
         });
     }

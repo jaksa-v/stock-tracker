@@ -19,7 +19,7 @@ class StockPriceResource extends JsonResource
         return [
             'symbol' => $this->symbol,
             'name' => $this->name,
-            'price' => $latestPrice ? $latestPrice->close : null,
+            'price' => $latestPrice ? round($latestPrice->close, 2) : null,
             'price_timestamp' => $latestPrice ? $latestPrice->price_timestamp->format('Y-m-d H:i:s') : null,
         ];
     }
